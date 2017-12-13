@@ -1,5 +1,6 @@
 package com.zinc.librouter.impl;
 
+import com.zinc.librouter.ParamInjector;
 import com.zinc.librouter.RouteTable;
 import com.zinc.librouter.modle.Configuration;
 import com.zinc.librouter.utils.RLog;
@@ -21,6 +22,8 @@ public class AptHub {
     private static final String ROUTE_TABLE = "RouteTable";
 
     static Map<String, Class<?>> routeTable = new HashMap<>();
+
+    static Map<String, Class<ParamInjector>> injectors = new HashMap<>();
 
     synchronized static void registerModules(String... modules) {
         if (modules == null || modules.length == 0) {

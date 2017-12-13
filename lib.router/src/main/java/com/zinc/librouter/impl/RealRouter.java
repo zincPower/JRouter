@@ -1,6 +1,7 @@
 package com.zinc.librouter.impl;
 
 import android.app.Activity;
+import android.app.Fragment;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -9,6 +10,8 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
+import com.zinc.libannotation.Param;
+import com.zinc.librouter.ParamInjector;
 import com.zinc.librouter.matcher.AbsMatcher;
 import com.zinc.librouter.matcher.MatcherRegister;
 import com.zinc.librouter.utils.RLog;
@@ -24,6 +27,8 @@ import java.util.Set;
  */
 
 final class RealRouter extends AbsRouter {
+
+    public static final String PARAM_CLASS_SUFFIX = "$$JRouter$$ParamInjector";
 
     private static RealRouter mInstance;
 
@@ -98,9 +103,6 @@ final class RealRouter extends AbsRouter {
     }
 
     private Intent finalizeIntent(Context context, AbsMatcher matcher, @Nullable Class<?> target) {
-//        if(intercept()){
-//
-//        }
 
         Object intent = matcher.generate(context, mRouteRequest.getUri(), target);
         if (intent instanceof Intent) {
@@ -123,9 +125,39 @@ final class RealRouter extends AbsRouter {
             return;
         }
 
-//        if(mRouteRequest){
-//
-//        }
+        if (mRouteRequest.getBundle() != null && !mRouteRequest.getBundle().isEmpty()) {
+            intent.putExtras(mRouteRequest.getBundle());
+        }
+    }
+
+    void injectParams(Object obj) {
+        if (obj instanceof Activity || obj instanceof Fragment || obj instanceof android.support.v4.app.Fragment) {
+            String key = obj.getClass().getCanonicalName();
+            Class<ParamInjector> clz;
+
+            if (!AptHub.injectors.containsKey(key)) {
+                try {
+                    clz = (Class<ParamInjector>) Class.forName(key + PARAM_CLASS_SUFFIX);
+                    AptHub.injectors.put(key, clz);
+                } catch (ClassNotFoundException e) {
+                    RLog.e("Inject params faield.", e);
+                    return;
+                }
+            } else {
+                clz = AptHub.injectors.get(key);
+            }
+
+            try{
+                ParamInjector injector = clz.newInstance();
+                injector.inject(obj);
+            }catch (Exception e){
+                RLog.e("Inject params failed.",e);
+            }
+
+        }else{
+            RLog.e("The obj you passed must be an instance of Activity or Fragment.");
+        }
+
     }
 
 }

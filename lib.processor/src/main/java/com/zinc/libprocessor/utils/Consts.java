@@ -10,8 +10,10 @@ public class Consts {
 
     //module的名
     public static final String OPTION_MODULE_NAME = "moduleName";
-    //Route的路径
+    //Route注解类的路径
     public static final String ROUTE_ANNOTATION_TYPE = "com.zinc.libannotation.Route";
+    //Param注解类的路径
+    public static final String PARAM_ANNOTATION_TYPE = "com.zinc.libannotation.Param";
 
     //activity的类路径
     public static final String ACTIVITY_FULL_NAME = "android.app.Activity";
@@ -31,9 +33,15 @@ public class Consts {
     public static final String ROUTER_TABLE = "RouteTable";
 
     //路由类
-    public static final String ROUTE_FULL_NAME = PACKAGE_NAME+DOT+ROUTER_TABLE;
+    public static final String ROUTE_FULL_NAME = PACKAGE_NAME + DOT + ROUTER_TABLE;
 
     //注释
-    public static final String CLASS_JAVA_DOC = "类注释";
+    public static final String CLASS_JAVA_DOC = "JRoute auto generate.Don't edit.";
+
+    //视图属性内部类 XXXActivity$$JRouter$$ParamInjector
+    public static final String INNER_CLASS_NAME = "$$JRouter$$ParamInjector";
+
+    //内部类方法名
+    public static final String METHOD_INJECT = "inject";
 
 }

@@ -44,9 +44,9 @@ import static com.zinc.libprocessor.utils.Consts.ROUTE_FULL_NAME;
  * @description 路由注解的解析器
  */
 
-//该解析器支持的注解
+//该解析器支持的注解[这里指@Router]
 @SupportedAnnotationTypes(ROUTE_ANNOTATION_TYPE)
-//
+//这个是要和gradle的匹对
 @SupportedOptions(OPTION_MODULE_NAME)
 //支持的编译jdk版本
 @SupportedSourceVersion(SourceVersion.RELEASE_7)

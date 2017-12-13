@@ -17,7 +17,8 @@ public class MainActivity extends AppCompatActivity {
 
     public void gotoSEC(View view){
 
-        Router.build("jfir").go(this);
+        Router.build("sec").with("myName","zinc").go(this);
+//        Router.build("android://sec").go(this);
 
     }
 

@@ -31,4 +31,8 @@ public class Router {
         return RealRouter.getInstance().build(uri);
     }
 
+    public static void injectParams(Object obj){
+        RealRouter.getInstance().injectParams(obj);
+    }
+
 }
