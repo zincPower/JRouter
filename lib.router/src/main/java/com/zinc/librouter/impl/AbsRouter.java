@@ -137,4 +137,9 @@ abstract class AbsRouter implements IRouter {
         return this;
     }
 
+    @Override
+    public IRouter addInterceptors(String... interceptors) {
+        mRouteRequest.setInterceptor(interceptors);
+        return this;
+    }
 }

@@ -6,6 +6,10 @@ import android.os.Bundle;
 import com.zinc.librouter.RouteCallback;
 
 import java.io.Serializable;
+import java.lang.reflect.Array;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * @author Jiang zinc
@@ -28,6 +32,13 @@ public class RouteRequest implements Serializable {
     private RouteCallback callback;
 
     private int requestCode = INVALID_REQUEST_CODE;
+
+    //添加的拦截器
+    private Set<String> addedInterceptors;
+    //移除的拦截器
+    private Set<String> removedInterceptors;
+    //是否跳过过滤
+    private boolean isSkipInterceptors;
 
     public RouteRequest(Uri uri) {
         this.uri = uri;
@@ -94,10 +105,46 @@ public class RouteRequest implements Serializable {
     }
 
     public void setRequestCode(int requestCode) {
-        if(requestCode < 0){
+        if (requestCode < 0) {
             this.requestCode = INVALID_REQUEST_CODE;
-        }else{
+        } else {
             this.requestCode = requestCode;
         }
+    }
+
+    public Set<String> getAddedInterceptors() {
+        return addedInterceptors;
+    }
+
+    public void setInterceptor(String... interceptors) {
+        if (interceptors == null || interceptors.length <= 0) {
+            return;
+        }
+        if (this.addedInterceptors == null) {
+            this.addedInterceptors = new HashSet<>(interceptors.length);
+        }
+        this.addedInterceptors.addAll(Arrays.asList(interceptors));
+    }
+
+    public Set<String> getRemovedInterceptors() {
+        return removedInterceptors;
+    }
+
+    public void setRemovedInterceptors(String... interceptors) {
+        if (interceptors == null || interceptors.length <= 0) {
+            return;
+        }
+        if(this.removedInterceptors == null){
+            this.removedInterceptors = new HashSet<>(interceptors.length);
+        }
+        this.removedInterceptors.addAll(Arrays.asList(interceptors));
+    }
+
+    public boolean isSkipInterceptors() {
+        return isSkipInterceptors;
+    }
+
+    public void setSkipInterceptors(boolean skipInterceptors) {
+        isSkipInterceptors = skipInterceptors;
     }
 }

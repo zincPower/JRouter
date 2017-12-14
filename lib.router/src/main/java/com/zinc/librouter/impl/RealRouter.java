@@ -12,10 +12,16 @@ import android.util.Log;
 
 import com.zinc.libannotation.Param;
 import com.zinc.librouter.ParamInjector;
+import com.zinc.librouter.RouteInterceptor;
+import com.zinc.librouter.RouteResult;
 import com.zinc.librouter.matcher.AbsMatcher;
 import com.zinc.librouter.matcher.MatcherRegister;
 import com.zinc.librouter.utils.RLog;
 
+import java.lang.reflect.Constructor;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,6 +38,8 @@ final class RealRouter extends AbsRouter {
 
     private static RealRouter mInstance;
 
+    private Map<String, RouteInterceptor> mInterceptorInstance = new HashMap<>();
+
     private RealRouter() {
 
     }
@@ -43,7 +51,12 @@ final class RealRouter extends AbsRouter {
         return mInstance;
     }
 
-
+    /**
+     * @date 创建时间 2017/12/14
+     * @author Jiang zinc
+     * @Description 页面跳转
+     * @version 1.0
+     */
     @Override
     public void go(Context context) {
         Intent intent = getIntent(context);
@@ -56,7 +69,7 @@ final class RealRouter extends AbsRouter {
 
         if (context instanceof Activity) {
 
-            ActivityCompat.startActivityForResult((Activity) context, intent, -1, options);
+            ActivityCompat.startActivityForResult((Activity) context, intent, mRouteRequest.getRequestCode(), options);
 
         } else {
 
@@ -65,18 +78,20 @@ final class RealRouter extends AbsRouter {
 
         }
 
+        callback(RouteResult.SUCCEED, null);
+
     }
 
     private Intent getIntent(Context context) {
 
         if (mRouteRequest.getUri() == null) {
-            // TODO: 2017/12/2 有回调时需要改
-            Log.e(TAG, "uri == null");
+            callback(RouteResult.FAILED, "uri == null");
             return null;
         }
 
         List<AbsMatcher> matcherList = MatcherRegister.getMatcher();
         if (matcherList.isEmpty()) {
+            callback(RouteResult.FAILED, "The MatcherRegistry contains no Matcher.");
             return null;
         }
 
@@ -98,19 +113,94 @@ final class RealRouter extends AbsRouter {
             }
         }
 
+        callback(RouteResult.FAILED, String.format("Can not find an Activity that matches the given uri: %s", mRouteRequest.getUri()));
         return null;
 
     }
 
+    /**
+     * 1、进行拦截器过滤
+     * 2、通过matcher获取intent
+     * 3、添加参数
+     *
+     * @param context
+     * @param matcher
+     * @param target
+     * @return
+     */
     private Intent finalizeIntent(Context context, AbsMatcher matcher, @Nullable Class<?> target) {
+
+        if (intercept(context, target)) {
+            return null;
+        }
 
         Object intent = matcher.generate(context, mRouteRequest.getUri(), target);
         if (intent instanceof Intent) {
             assembleIntent((Intent) intent);
             return (Intent) intent;
         } else { //没有匹配到
+            callback(RouteResult.FAILED, String.format("The matcher can't generate an intent for uri: %s", mRouteRequest.getUri().toString()));
             return null;
         }
+
+    }
+
+    /**
+     * @date 创建时间 2017/12/14
+     * @author Jiang zinc
+     * @Description 是否需要进行拦截【true：拦截   false：放过】
+     * @version 1.0
+     */
+    private boolean intercept(Context context, Class<?> target) {
+
+        if (mRouteRequest.isSkipInterceptors()) {
+            return false;
+        }
+
+        Set<String> finalInterceptors = new HashSet<>();
+
+        if (target != null) {
+
+            //添加全局的拦截器
+            String[] baseInterceptors = AptHub.targetInterceptors.get(target);
+            if (baseInterceptors != null && baseInterceptors.length > 0) {
+                Collections.addAll(finalInterceptors, baseInterceptors);
+            }
+
+            //移除removedInterceptors的拦截器
+            if (mRouteRequest.getRemovedInterceptors() != null) {
+                finalInterceptors.removeAll(mRouteRequest.getRemovedInterceptors());
+            }
+
+        }
+
+        //添加视图addedInterceptors的拦截器
+        if (mRouteRequest.getAddedInterceptors() != null) {
+            finalInterceptors.addAll(mRouteRequest.getAddedInterceptors());
+        }
+
+        if (!finalInterceptors.isEmpty()) {
+            for (String name : finalInterceptors) {
+                RouteInterceptor interceptor = mInterceptorInstance.get(name);
+                if (interceptor == null) {
+                    Class<? extends RouteInterceptor> clz = AptHub.interceptorTable.get(name);
+                    Constructor<? extends RouteInterceptor> constructor = null;
+                    try {
+                        constructor = clz.getConstructor();
+                        interceptor = constructor.newInstance();
+                    } catch (Exception e) {
+                        RLog.e(String.format("Can't construct a interceptor with name: %s", name));
+                        e.printStackTrace();
+                    }
+
+                    if (interceptor != null && interceptor.intercept(context, mRouteRequest)) {
+                        callback(RouteResult.INTERCEPTED, String.format("Intercepted:{uri: %s, interceptor: %s}", mRouteRequest.getUri().toString(), name));
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
 
     }
 
@@ -128,6 +218,23 @@ final class RealRouter extends AbsRouter {
         if (mRouteRequest.getBundle() != null && !mRouteRequest.getBundle().isEmpty()) {
             intent.putExtras(mRouteRequest.getBundle());
         }
+
+        if (mRouteRequest.getFlags() != 0) {
+            intent.addFlags(mRouteRequest.getFlags());
+        }
+
+        if (mRouteRequest.getData() != null) {
+            intent.setData(mRouteRequest.getData());
+        }
+
+        if (mRouteRequest.getAction() != null) {
+            intent.setAction(mRouteRequest.getAction());
+        }
+
+        if (mRouteRequest.getType() != null) {
+            intent.setType(mRouteRequest.getType());
+        }
+
     }
 
     void injectParams(Object obj) {
@@ -147,17 +254,26 @@ final class RealRouter extends AbsRouter {
                 clz = AptHub.injectors.get(key);
             }
 
-            try{
+            try {
                 ParamInjector injector = clz.newInstance();
                 injector.inject(obj);
-            }catch (Exception e){
-                RLog.e("Inject params failed.",e);
+            } catch (Exception e) {
+                RLog.e("Inject params failed.", e);
             }
 
-        }else{
+        } else {
             RLog.e("The obj you passed must be an instance of Activity or Fragment.");
         }
 
+    }
+
+    private void callback(RouteResult result, String msg) {
+        if (result != RouteResult.SUCCEED) {
+            RLog.w(msg);
+        }
+        if (mRouteRequest.getCallback() != null) {
+            mRouteRequest.getCallback().callback(result, mRouteRequest.getUri(), msg);
+        }
     }
 
 }

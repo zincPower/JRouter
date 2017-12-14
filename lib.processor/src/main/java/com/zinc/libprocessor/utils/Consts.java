@@ -14,6 +14,8 @@ public class Consts {
     public static final String ROUTE_ANNOTATION_TYPE = "com.zinc.libannotation.Route";
     //Param注解类的路径
     public static final String PARAM_ANNOTATION_TYPE = "com.zinc.libannotation.Param";
+    //Intercepor注解类的路径
+    public static final String INTERCEPTOR_ANNOTATION_TYPE = "com.zinc.libannotation.Interceptor";
 
     //activity的类路径
     public static final String ACTIVITY_FULL_NAME = "android.app.Activity";
@@ -29,9 +31,11 @@ public class Consts {
     public static final String PACKAGE_NAME = "com.zinc.librouter";
     //分隔符
     public static final String DOT = ".";
-    //类名
+    //路由表类名
     public static final String ROUTER_TABLE = "RouteTable";
 
+    //拦截器类名
+    public static final String INTERCEPTOR_TABLE = "InterceptorTable";
     //路由类
     public static final String ROUTE_FULL_NAME = PACKAGE_NAME + DOT + ROUTER_TABLE;
 
@@ -43,5 +47,7 @@ public class Consts {
 
     //内部类方法名
     public static final String METHOD_INJECT = "inject";
+
+    public static final String INTERCEPTOR_INTERFACE = PACKAGE_NAME+DOT+"RouteInterceptor";
 
 }

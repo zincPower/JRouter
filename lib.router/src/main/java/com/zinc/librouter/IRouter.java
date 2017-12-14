@@ -32,4 +32,6 @@ public interface IRouter {
      */
     IRouter with(Bundle bundle);
 
+    IRouter addInterceptors(String ...interceptors);
+
 }

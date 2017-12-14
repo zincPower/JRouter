@@ -1,7 +1,10 @@
 package com.zinc.librouter.impl;
 
+import com.zinc.librouter.InterceptorTable;
 import com.zinc.librouter.ParamInjector;
+import com.zinc.librouter.RouteInterceptor;
 import com.zinc.librouter.RouteTable;
+import com.zinc.librouter.TargetInterceptors;
 import com.zinc.librouter.modle.Configuration;
 import com.zinc.librouter.utils.RLog;
 
@@ -21,7 +24,17 @@ public class AptHub {
     private static final String DOT = ".";
     private static final String ROUTE_TABLE = "RouteTable";
 
+    private static final String INTERCEPTOR_TABLE = "InterceptorTable";
+    private static final String TARGET_INTERCEPTORS = "TargetInterceptors";
+
+    //uri: Activity/Fragment
     static Map<String, Class<?>> routeTable = new HashMap<>();
+
+    //Activity/Fragment: interceptorTable's name
+    static Map<Class<?>, String[]> targetInterceptors = new HashMap<>();
+
+    //interceptor's name: interceptor
+    static Map<String, Class<? extends RouteInterceptor>> interceptorTable = new HashMap<>();
 
     static Map<String, Class<ParamInjector>> injectors = new HashMap<>();
 
@@ -48,6 +61,46 @@ public class AptHub {
                     e.printStackTrace();
                 }
 
+            }
+
+            RLog.i("RouteTable", routeTable.toString());
+
+            //TargetInterceptors
+            String targetInterceptorsName;
+            for (String moduleName : modules) {
+                try {
+                    targetInterceptorsName = PACKAGE_NAME + DOT + capitalize(moduleName) + TARGET_INTERCEPTORS;
+                    Class<?> clz = Class.forName(targetInterceptorsName);
+                    Constructor constructor = clz.getConstructor();
+                    TargetInterceptors instance = (TargetInterceptors) constructor.newInstance();
+                    instance.handle(targetInterceptors);
+                } catch (ClassNotFoundException e) {
+                    RLog.i(String.format("There is no TargetInterceptors in module: %s.", moduleName));
+                } catch (Exception e) {
+                    RLog.w(e.getMessage());
+                }
+            }
+            if (!targetInterceptors.isEmpty()) {
+                RLog.i("TargetInterceptors", targetInterceptors.toString());
+            }
+
+            //InterceptorTable
+            String interceptorName;
+            for (String moduleName : modules) {
+                try {
+                    interceptorName = PACKAGE_NAME + DOT + capitalize(moduleName) + INTERCEPTOR_TABLE;
+                    Class<?> clz = Class.forName(interceptorName);
+                    Constructor constructor = clz.getConstructor();
+                    InterceptorTable instance = (InterceptorTable) constructor.newInstance();
+                    instance.handle(interceptorTable);
+                } catch (ClassNotFoundException e) {
+                    RLog.i(String.format("There is no InterceptorTable in module: %s.", moduleName));
+                } catch (Exception e) {
+                    RLog.w(e.getMessage());
+                }
+            }
+            if (!interceptorTable.isEmpty()) {
+                RLog.i("InterceptorTable", interceptorTable.toString());
             }
 
         }

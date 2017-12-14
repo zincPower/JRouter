@@ -1,2 +1,3 @@
 com.zinc.libprocessor.processor.RouteProcessor
 com.zinc.libprocessor.processor.ParamProcessor
+com.zinc.libprocessor.processor.InterceptorProcessor
