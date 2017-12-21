@@ -34,4 +34,6 @@ public interface IRouter {
 
     IRouter addInterceptors(String ...interceptors);
 
+    Object getFragment(Context context);
+
 }

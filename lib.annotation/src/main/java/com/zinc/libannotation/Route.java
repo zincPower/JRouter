@@ -20,4 +20,10 @@ public @interface Route {
      */
     String[] value();
 
+    /**
+     * 拦截器名称
+     * @return
+     */
+    String[] interceptors() default {};
+
 }

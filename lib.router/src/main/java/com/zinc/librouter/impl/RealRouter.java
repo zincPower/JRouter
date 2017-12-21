@@ -11,9 +11,11 @@ import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
 import com.zinc.libannotation.Param;
+import com.zinc.libannotation.Route;
 import com.zinc.librouter.ParamInjector;
 import com.zinc.librouter.RouteInterceptor;
 import com.zinc.librouter.RouteResult;
+import com.zinc.librouter.matcher.AbsImplicitMatcher;
 import com.zinc.librouter.matcher.AbsMatcher;
 import com.zinc.librouter.matcher.MatcherRegister;
 import com.zinc.librouter.utils.RLog;
@@ -82,11 +84,90 @@ final class RealRouter extends AbsRouter {
 
     }
 
+    @Override
+    public Object getFragment(Context context) {
+        if (mRouteRequest.getUri() == null) {
+            callback(RouteResult.FAILED, "uri == null.");
+            return null;
+        }
+
+        if (!mRouteRequest.isSkipInterceptors()) {
+            for (RouteInterceptor interceptor : Router.getGlobalInterceptors()) {
+                if (interceptor.intercept(context, mRouteRequest)) {
+                    callback(RouteResult.INTERCEPTED, "Intercepted by global interceptor.");
+                    return null;
+                }
+            }
+        }
+
+        List<AbsMatcher> matcherList = MatcherRegister.getMatcher();
+        if (matcherList.isEmpty()) {
+            callback(RouteResult.FAILED, "The MatcherRegistry contains no Matcher.");
+            return null;
+        }
+
+        // fragment only matches explicit route
+        if (AptHub.routeTable.isEmpty()) {
+            callback(RouteResult.FAILED, "The route table contains no mapping.");
+            return null;
+        }
+
+        Set<Map.Entry<String, Class<?>>> entries = AptHub.routeTable.entrySet();
+
+        for (AbsMatcher matcher : matcherList) {
+            if (matcher instanceof AbsImplicitMatcher) { // Ignore implicit matcher.
+                continue;
+            }
+            for (Map.Entry<String, Class<?>> entry : entries) {
+                if (matcher.match(context, mRouteRequest.getUri(), entry.getKey(), mRouteRequest)) {
+                    RLog.i("Caught by " + matcher.getClass().getCanonicalName());
+                    if (intercept(context, entry.getValue())) {
+                        return null;
+                    }
+                    Object result = matcher.generate(context, mRouteRequest.getUri(), entry.getValue());
+                    if (result instanceof android.support.v4.app.Fragment) {
+                        android.support.v4.app.Fragment fragment = (android.support.v4.app.Fragment) result;
+                        Bundle bundle = mRouteRequest.getBundle();
+                        if (bundle != null && !bundle.isEmpty()) {
+                            fragment.setArguments(bundle);
+                        }
+                        return fragment;
+                    } else if (result instanceof android.app.Fragment) {
+                        android.app.Fragment fragment = (android.app.Fragment) result;
+                        Bundle bundle = mRouteRequest.getBundle();
+                        if (bundle != null && !bundle.isEmpty()) {
+                            fragment.setArguments(bundle);
+                        }
+                        return fragment;
+                    } else {
+                        callback(RouteResult.FAILED, String.format(
+                                "The matcher can't generate a fragment instance for uri: %s",
+                                mRouteRequest.getUri().toString()));
+                        return null;
+                    }
+                }
+            }
+        }
+
+        callback(RouteResult.FAILED, String.format(
+                "Can not find an Fragment that matches the given uri: %s", mRouteRequest.getUri()));
+        return null;
+    }
+
     private Intent getIntent(Context context) {
 
         if (mRouteRequest.getUri() == null) {
             callback(RouteResult.FAILED, "uri == null");
             return null;
+        }
+
+        if (!mRouteRequest.isSkipInterceptors()) {
+            for (RouteInterceptor interceptor : Router.getGlobalInterceptors()) {
+                if (interceptor.intercept(context, mRouteRequest)) {
+                    callback(RouteResult.INTERCEPTED, "Intercepted by global interceptor.");
+                    return null;
+                }
+            }
         }
 
         List<AbsMatcher> matcherList = MatcherRegister.getMatcher();

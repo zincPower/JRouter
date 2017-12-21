@@ -50,4 +50,5 @@ public class Consts {
 
     public static final String INTERCEPTOR_INTERFACE = PACKAGE_NAME+DOT+"RouteInterceptor";
 
+    public static final String TABLE_INTERCEPTORS = "TargetInterceptors";
 }

@@ -2,6 +2,7 @@ package com.zinc.jrouter;
 
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.TextView;
 
@@ -15,7 +16,7 @@ import com.zinc.librouter.impl.Router;
  * @description
  */
 
-@Route("sec")
+@Route(value = "sec", interceptors = "MyTestInterceptor")
 public class SecActivity extends AppCompatActivity {
 
     @Param(key = "myName")
@@ -27,7 +28,11 @@ public class SecActivity extends AppCompatActivity {
         setContentView(R.layout.activity_sec);
         Router.injectParams(this);
 
-        ((TextView)findViewById(R.id.tv_content)).setText(name);
+        Fragment fragment = (Fragment) Router.build("sec_fragment").getFragment(this);
+        if(fragment != null){
+            getSupportFragmentManager().beginTransaction().add(R.id.frame_layout, fragment).commit();
+        }
+//        ((TextView)findViewById(R.id.tv_content)).setText(name);
 
     }
 

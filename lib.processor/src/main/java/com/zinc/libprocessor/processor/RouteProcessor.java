@@ -6,6 +6,7 @@ import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.WildcardTypeName;
 import com.zinc.libannotation.Route;
@@ -37,6 +38,7 @@ import static com.zinc.libprocessor.utils.Consts.PACKAGE_NAME;
 import static com.zinc.libprocessor.utils.Consts.ROUTER_TABLE;
 import static com.zinc.libprocessor.utils.Consts.ROUTE_ANNOTATION_TYPE;
 import static com.zinc.libprocessor.utils.Consts.ROUTE_FULL_NAME;
+import static com.zinc.libprocessor.utils.Consts.TABLE_INTERCEPTORS;
 
 /**
  * @author Jiang zinc
@@ -95,6 +97,58 @@ public class RouteProcessor extends AbstractProcessor {
     }
 
     private void generateTargetInterceptors(String validModuleName, Set<TypeElement> typeElements) {
+
+        //Map<Class<?>, String[]> map
+        ParameterizedTypeName mapTypeName = ParameterizedTypeName.get(
+                ClassName.get(Map.class),
+                ParameterizedTypeName.get(ClassName.get(Class.class),
+                        WildcardTypeName.subtypeOf(Object.class)),
+                TypeName.get(String[].class));
+        ParameterSpec mapParameterSpec = ParameterSpec.builder(mapTypeName, "map").build();
+
+        //@Override
+        //public void handle(Map<Class<?>, String[]> map){}
+        MethodSpec.Builder methodHandleBuilder = MethodSpec.methodBuilder(HANDLE)
+                .addAnnotation(Override.class)
+                .addModifiers(Modifier.PUBLIC)
+                .addParameter(mapParameterSpec);
+
+        boolean hasInterceptor = false;
+        //获取@Route中的interceptor值
+        for (TypeElement typeElement : typeElements) {
+            Route route = typeElement.getAnnotation(Route.class);
+            String[] interceptors = route.interceptors();
+            if (interceptors.length > 1) {
+                hasInterceptor = true;
+                StringBuilder stringBuilder = new StringBuilder();
+                for(String interceptor : interceptors){
+                    stringBuilder.append("\"").append(interceptor).append("\",");
+                }
+                methodHandleBuilder.addStatement("map.put($T.class, new String[]{$L})",
+                        ClassName.get(typeElement), stringBuilder.subSequence(0, stringBuilder.lastIndexOf(",")));
+            } else if(interceptors.length == 1){
+                hasInterceptor = true;
+                methodHandleBuilder.addStatement("map.put($T.class, new String[]{$S})",
+                        ClassName.get(typeElement), interceptors[0]);
+            }
+        }
+
+        if(!hasInterceptor){
+            return;
+        }
+
+        TypeSpec type = TypeSpec.classBuilder(capitalize(mModuleName)+TABLE_INTERCEPTORS)
+                .addSuperinterface(ClassName.get(PACKAGE_NAME, TABLE_INTERCEPTORS))
+                .addModifiers(Modifier.PUBLIC)
+                .addMethod(methodHandleBuilder.build())
+                .addJavadoc(CLASS_JAVA_DOC)
+                .build();
+
+        try {
+            JavaFile.builder(PACKAGE_NAME,type).build().writeTo(processingEnv.getFiler());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     //编写路由映射表
@@ -124,12 +178,12 @@ public class RouteProcessor extends AbstractProcessor {
             String[] paths = route.value();
             //将route的映射加入方法handle
             for (String path : paths) {
-                methodHandle.addStatement("map.put($S, $T.class)",path, ClassName.get(element));
+                methodHandle.addStatement("map.put($S, $T.class)", path, ClassName.get(element));
             }
         }
 
         TypeElement interfaceType = processingEnv.getElementUtils().getTypeElement(ROUTE_FULL_NAME);
-        TypeSpec type = TypeSpec.classBuilder(capitalize(validModuleName)+ROUTER_TABLE)
+        TypeSpec type = TypeSpec.classBuilder(capitalize(validModuleName) + ROUTER_TABLE)
                 .addSuperinterface(ClassName.get(interfaceType))
                 .addModifiers(Modifier.PUBLIC)
                 .addMethod(methodHandle.build())
@@ -186,9 +240,9 @@ public class RouteProcessor extends AbstractProcessor {
 
     }
 
-    private String capitalize(CharSequence self){
-        return self.length() == 0?
-                "":""+Character.toUpperCase(self.charAt(0))+self.subSequence(1,self.length());
+    private String capitalize(CharSequence self) {
+        return self.length() == 0 ?
+                "" : "" + Character.toUpperCase(self.charAt(0)) + self.subSequence(1, self.length());
     }
 
 }

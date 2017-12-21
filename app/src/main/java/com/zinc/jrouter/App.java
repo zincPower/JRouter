@@ -3,7 +3,9 @@ package com.zinc.jrouter;
 import android.app.Application;
 import android.os.Build;
 
+import com.zinc.libannotation.Route;
 import com.zinc.librouter.impl.Router;
+import com.zinc.librouter.matcher.MatcherRegister;
 import com.zinc.librouter.modle.Configuration;
 
 /**
@@ -22,6 +24,8 @@ public class App extends Application {
                 .setDebuggable(BuildConfig.DEBUG)
                 .registerModules("app","lib.JFir","lib.JSec")
                 .build());
+
+        MatcherRegister.addMatcher(new MyBrowserMatcher(0x0002));
 
     }
 
